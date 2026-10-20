@@ -268,6 +268,15 @@ export class rngdle extends plugin {
     return true
   }
 
+  /** 群聊回复开头@触发者：按钮回调触发的场景下，群里看不出结果是谁掷的 */
+  async replyWithAt (content) {
+    const msg = Array.isArray(content) ? content : [content]
+    if (this.e.isGroup) {
+      return this.e.reply([segment.at(this.e.user_id), ...msg])
+    }
+    return this.e.reply(msg)
+  }
+
   /** 解析昵称：sender → 群成员缓存(gml) → 适配器用户资料缓存(users) → 官Bot群成员API兜底 */
   async resolveName (uid = this.e?.user_id, e = this.e) {
     if (!uid) return ''
@@ -306,7 +315,7 @@ export class rngdle extends plugin {
     const u = getUser(uid, name)
     if (u.lastDate === day) {
       const last = u.lastNumber != null ? composeResult(u.lastNumber) : null
-      await this.e.reply(
+      await this.replyWithAt(
         `今天已经掷过啦～你的数字是 ${u.lastNumber}（${fmtNum(last ? last.totalScore : 0)} EP）\n` +
         `距离明日重置还有 ${formatCountdown(msUntilMidnight())}，明天再来吧！`,
       )
@@ -322,18 +331,18 @@ export class rngdle extends plugin {
       todayCount: daily ? daily.count : 0,
     })
     if (!img) {
-      await this.e.reply(`🎲 你掷出了 ${number}！+${fmtNum(result.totalScore)} EP（${result.earnedCount} 枚徽章）\n（图片渲染失败）`)
+      await this.replyWithAt(`🎲 你掷出了 ${number}！+${fmtNum(result.totalScore)} EP（${result.earnedCount} 枚徽章）\n（图片渲染失败）`)
       return true
     }
     const btn = buildButtons()
     if (btn) {
       try {
-        await this.e.reply([img, btn])
+        await this.replyWithAt([img, btn])
       } catch {
-        await this.e.reply(img)
+        await this.replyWithAt(img)
       }
     } else {
-      await this.e.reply(img)
+      await this.replyWithAt(img)
     }
     return true
   }
@@ -347,7 +356,7 @@ export class rngdle extends plugin {
       flavor: pickFlavor(result.tier, number),
       isReroll: true,
     })
-    await this.e.reply(img || `🎲 试掷 ${number}：${fmtNum(result.totalScore)} EP（${result.earnedCount} 枚徽章）`)
+    await this.replyWithAt(img || `🎲 试掷 ${number}：${fmtNum(result.totalScore)} EP（${result.earnedCount} 枚徽章）`)
     return true
   }
 
@@ -364,7 +373,7 @@ export class rngdle extends plugin {
     const uid = this.e.user_id
     const u = db.users[uid]
     if (!u || !u.rolls) {
-      await this.e.reply('你还没有掷过数～发送 #RNGdle 开始今天的掷数！')
+      await this.replyWithAt('你还没有掷过数～发送 #RNGdle 开始今天的掷数！')
       return true
     }
     if (!u.name) {
@@ -415,7 +424,7 @@ export class rngdle extends plugin {
       collectedPercent: Math.round((collected / BADGES.length) * 100),
       topBadges,
     })
-    await this.e.reply(img || '统计图渲染失败')
+    await this.replyWithAt(img || '统计图渲染失败')
     return true
   }
 
@@ -527,7 +536,7 @@ export class rngdle extends plugin {
       totalBadges: BADGES.length,
       collectedPercent: Math.round((collected / BADGES.length) * 100),
     })
-    await this.e.reply(img || '徽章图鉴渲染失败')
+    await this.replyWithAt(img || '徽章图鉴渲染失败')
     return true
   }
 }
