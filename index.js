@@ -7,6 +7,7 @@ import plugin from '../../lib/plugins/plugin.js'
 import puppeteer from '../../lib/puppeteer/puppeteer.js'
 import { composeResult, rollRandomNumber, MAX_ROLL, tierInfo, BADGES } from './lib/analyze.js'
 import { TIER_FLAVOR } from './lib/badges-zh.js'
+import { getConfig } from './lib/config.js'
 
 const _dirname = path.dirname(fileURLToPath(import.meta.url))
 const TPL_DIR = path.join(_dirname, 'resources', 'html')
@@ -85,16 +86,37 @@ function recordRoll (uid, name, result) {
   if (!u.best || result.totalScore > u.best.ep) {
     u.best = { number: result.number, ep: result.totalScore, date: day }
   }
-  const daily = db.daily[day] = db.daily[day] || { count: 0, best: null }
+  const daily = db.daily[day] = db.daily[day] || { count: 0, best: null, players: {} }
   daily.count += 1
   if (!daily.best || result.totalScore > daily.best.ep) {
     daily.best = { uid: String(uid), name: u.name, number: result.number, ep: result.totalScore }
   }
-  // 只保留最近 30 天的每日记录
-  const keys = Object.keys(db.daily).sort()
-  while (keys.length > 30) delete db.daily[keys.shift()]
+  // 每日玩家数据（用于日榜）
+  daily.players = daily.players || {}
+  const p = daily.players[uid] = daily.players[uid] || { name: u.name, rolls: 0, ep: 0 }
+  p.name = u.name
+  p.rolls += 1
+  p.ep += result.totalScore
+  p.number = result.number
+  pruneDaily()
   saveDb()
   return u
+}
+
+/** 按配置的保留天数清理过期每日记录（keepDays=1 即只保留当天） */
+function pruneDaily () {
+  const keep = Math.max(1, Math.min(30, parseInt(getConfig().keepDays) || 30))
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - (keep - 1))
+  const cut = todayKey(cutoff)
+  let changed = false
+  for (const k of Object.keys(db.daily)) {
+    if (k < cut) {
+      delete db.daily[k]
+      changed = true
+    }
+  }
+  if (changed) saveDb()
 }
 
 // ---------- 渲染层 ----------
@@ -110,9 +132,13 @@ async function renderTpl (tpl, data = {}) {
   })
 }
 
-// 徽章展示行预处理：贡献位高亮、文案格式化
+// 徽章展示树：计分徽章为主行（按 EP 降序），同族未计分的「已收集」徽章折叠为子行
 function badgeRows (result) {
-  return result.badges.map(b => {
+  const rows = []
+  const familyRow = new Map()
+  // 第一轮：计分徽章与无族徽章作为主行
+  for (const b of result.badges) {
+    if (!b.isScoring && b.family) continue
     let digits = null
     const c = b.contributors
     if (c) {
@@ -128,18 +154,25 @@ function badgeRows (result) {
         digits = String(result.number).split('').map((d, i) => ({ d, hi: hi.has(i) }))
       }
     }
-    return {
+    const row = {
       emoji: b.emoji,
       name: b.zhName,
       desc: b.zhDesc,
       rarity: b.rarity,
       rarityZh: tierInfo(b.rarity).name,
-      score: b.isScoring ? b.score.toLocaleString('en-US') : '',
-      ep: b.isScoring ? `+${b.score.toLocaleString('en-US')} EP` : '已收集',
-      isScoring: b.isScoring,
+      ep: `+${b.score.toLocaleString('en-US')} EP`,
       digits,
+      children: [],
     }
-  })
+    rows.push(row)
+    if (b.family) familyRow.set(b.family, row)
+  }
+  // 第二轮：同族未计分徽章折叠到族内最高分主行下
+  for (const b of result.badges) {
+    if (b.isScoring || !b.family) continue
+    familyRow.get(b.family)?.children.push({ emoji: b.emoji, name: b.zhName })
+  }
+  return rows
 }
 
 function pickFlavor (tier, number) {
@@ -182,7 +215,10 @@ function buildButtons () {
     return segment.button([
       [
         { text: '📊 我的统计', callback: '#RNGdle统计' },
-        { text: '🏆 排行榜', callback: '#RNGdle排行' },
+        { text: '📅 日榜', callback: '#RNGdle日榜' },
+      ],
+      [
+        { text: '💎 总榜', callback: '#RNGdle总榜' },
         { text: '📜 帮助', callback: '#RNGdle帮助' },
       ],
     ])
@@ -210,7 +246,8 @@ export class rngdle extends plugin {
         { reg: /^#rng(dle)?$/i, fnc: 'roll', log: true },
         { reg: /^#rng(dle)?(帮助|说明|help)$/i, fnc: 'help', log: false },
         { reg: /^#rng(dle)?(统计|我的|资料)$/i, fnc: 'stats', log: false },
-        { reg: /^#rng(dle)?(排行|排行榜|榜)$/i, fnc: 'rank', log: false },
+        { reg: /^#rng(dle)?日榜$/i, fnc: 'dailyRank', log: false },
+        { reg: /^#rng(dle)?(总榜|累计榜)$/i, fnc: 'totalRank', log: false },
         { reg: /^#rng(dle)?(徽章|图鉴|收集)$/i, fnc: 'dex', log: false },
         { reg: /^#rng(dle)?试掷\s*(\d{1,7})$/i, fnc: 'testRoll', log: true, permission: 'master' },
       ],
@@ -218,8 +255,7 @@ export class rngdle extends plugin {
   }
 
   async cleanDaily () {
-    const keys = Object.keys(db.daily).sort()
-    while (keys.length > 30) delete db.daily[keys.shift()]
+    pruneDaily()
     saveDb()
     return true
   }
@@ -338,27 +374,46 @@ export class rngdle extends plugin {
     return true
   }
 
-  async rank () {
-    const day = todayKey()
-    const daily = db.daily[day]
-    const users = Object.entries(db.users)
-      .filter(([, u]) => u.rolls > 0)
-      .map(([uid, u]) => ({
-        uid,
-        name: u.name || uid,
-        ep: u.lifetimeEP,
-        rolls: u.rolls,
-        best: u.best,
-      }))
+  /** 日榜：当日玩家的抽取与 EP */
+  async dailyRank () {
+    pruneDaily()
+    const daily = db.daily[todayKey()]
+    const limit = Math.max(1, Math.min(50, parseInt(getConfig().rankLimit) || 10))
+    const players = Object.entries(daily?.players || {})
+      .map(([uid, p]) => ({ uid, name: p.name || uid, number: p.number ?? '-', ep: p.ep || 0 }))
       .sort((a, b) => b.ep - a.ep)
-      .slice(0, 10)
-    const img = await renderTpl('rank.html', {
+      .slice(0, limit)
+    const img = await renderTpl('daily-rank.html', {
       _plugin: 'RNGdle',
       todayBest: daily?.best
         ? { name: daily.best.name, number: daily.best.number, ep: fmtNum(daily.best.ep) }
         : null,
+      todayTotal: daily?.players ? Object.keys(daily.players).length : 0,
       todayCount: daily ? daily.count : 0,
-      totalPlayers: users.length ? Object.keys(db.users).length : 0,
+      limit,
+      players: players.map((u, i) => ({
+        rank: i + 1,
+        name: u.name,
+        number: u.number,
+        ep: fmtNum(u.ep),
+      })),
+    })
+    await this.e.reply(img || '日榜渲染失败')
+    return true
+  }
+
+  /** 总榜：历史累计 EP */
+  async totalRank () {
+    const limit = Math.max(1, Math.min(50, parseInt(getConfig().rankLimit) || 10))
+    const users = Object.entries(db.users)
+      .filter(([, u]) => u.rolls > 0)
+      .map(([uid, u]) => ({ uid, name: u.name || uid, ep: u.lifetimeEP, rolls: u.rolls, best: u.best }))
+      .sort((a, b) => b.ep - a.ep)
+      .slice(0, limit)
+    const img = await renderTpl('total-rank.html', {
+      _plugin: 'RNGdle',
+      totalPlayers: Object.keys(db.users).length,
+      limit,
       users: users.map((u, i) => ({
         rank: i + 1,
         name: u.name,
@@ -367,7 +422,7 @@ export class rngdle extends plugin {
         bestNumber: u.best ? u.best.number : '-',
       })),
     })
-    await this.e.reply(img || '排行图渲染失败')
+    await this.e.reply(img || '总榜渲染失败')
     return true
   }
 

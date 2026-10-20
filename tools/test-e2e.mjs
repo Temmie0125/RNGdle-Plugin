@@ -47,16 +47,20 @@ await run('掷数', 'roll', '#RNGdle', 900001, t => t?.includes('image'))
 await run('重复掷数', 'roll', '#RNG', 900001, t => typeof inst.e._r === 'string')
 await run('试掷(数字2)', 'testRoll', '#RNGdle试掷 2', 900001, t => t === 'image')
 await run('统计', 'stats', '#RNGdle统计', 900001, t => t === 'image')
-await run('排行', 'rank', '#RNGdle排行', 900001, t => t === 'image')
+await run('日榜', 'dailyRank', '#RNGdle日榜', 900001, t => t === 'image')
+await run('总榜', 'totalRank', '#RNGdle总榜', 900001, t => t === 'image')
 await run('图鉴', 'dex', '#RNGdle徽章', 900001, t => t === 'image')
 await run('帮助', 'help', '#RNGdle帮助', 900001, t => t === 'image')
 
 // 清理回归测试产生的数据
-delete global.db
 const dbFile = path.join(ROOT, 'plugins/RNGdle-Plugin/data/db.json')
 try {
   const db = JSON.parse(fs.readFileSync(dbFile, 'utf8'))
   delete db.users['900001']
+  const today = new Date()
+  const p = n => String(n).padStart(2, '0')
+  const day = `${today.getFullYear()}-${p(today.getMonth() + 1)}-${p(today.getDate())}`
+  delete db.daily?.[day]
   fs.writeFileSync(dbFile, JSON.stringify(db))
 } catch {}
 

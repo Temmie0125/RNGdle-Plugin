@@ -62,11 +62,17 @@
   .badge { border: 1px solid rgba(255,255,255,0.07); border-radius: 12px;
     padding: 10px 14px; margin-bottom: 8px; background: rgba(255,255,255,0.025); }
   .badge-top { display: flex; align-items: center; gap: 10px; }
-  .b-emoji { font-size: 22px; width: 30px; text-align: center; }
+  .b-emoji { font-size: 22px; min-width: 30px; max-width: 110px; text-align: center; white-space: nowrap; }
   .b-name { font-size: 15px; font-weight: 700; color: #f3f4f6; flex: 1; }
   .b-rarity { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; letter-spacing: 0.5px; }
   .b-ep { font-size: 14px; font-weight: 800; color: #fbbf24; min-width: 110px; text-align: right; }
-  .b-ep.earn { color: #6b7280; font-weight: 600; font-size: 12px; }
+  /* 同族「已收集」折叠子行 */
+  .sub-badge { display: flex; align-items: center; gap: 8px; margin: 5px 0 0 30px; padding: 7px 12px;
+    border-radius: 9px; background: rgba(255,255,255,0.018); border: 1px solid rgba(255,255,255,0.05); }
+  .sub-badge .mark { color: #4b5563; font-size: 13px; line-height: 1; }
+  .sub-badge .b-emoji { font-size: 15px; min-width: 24px; max-width: 90px; text-align: center; white-space: nowrap; }
+  .sub-badge .sub-name { flex: 1; font-size: 12.5px; color: #6b7280; }
+  .sub-badge .sub-ep { font-size: 11.5px; color: #4b5563; letter-spacing: 1px; }
   .b-desc { font-size: 12.5px; color: #9ca3af; margin: 5px 0 0 40px; }
   .mini { display: flex; gap: 4px; margin: 7px 0 0 40px; }
   .mini span {
@@ -112,7 +118,7 @@
         <span class="b-emoji">{{b.emoji}}</span>
         <span class="b-name">{{b.name}}</span>
         <span class="b-rarity p-{{b.rarity}}">{{b.rarityZh}}</span>
-        <span class="b-ep {{b.isScoring ? '' : 'earn'}}">{{b.ep}}</span>
+        <span class="b-ep">{{b.ep}}</span>
       </div>
       <div class="b-desc">{{b.desc}}</div>
       {{if b.digits}}
@@ -123,6 +129,14 @@
       </div>
       {{/if}}
     </div>
+    {{each b.children c}}
+    <div class="sub-badge">
+      <span class="mark">└</span>
+      <span class="b-emoji">{{c.emoji}}</span>
+      <span class="sub-name">{{c.name}}</span>
+      <span class="sub-ep">已收集</span>
+    </div>
+    {{/each}}
     {{/each}}
   </div>
 

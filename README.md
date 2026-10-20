@@ -12,7 +12,8 @@
 | --- | --- |
 | `#RNGdle` / `#RNG` | 掷出今天的随机数（每日 0 点重置） |
 | `#RNGdle统计` | 个人累计 EP、最佳纪录与徽章收集 |
-| `#RNGdle排行` | 今日最佳数字与全服累计 EP 排行 |
+| `#RNGdle日榜` | 今日最佳数字与当日玩家抽取排行 |
+| `#RNGdle总榜` | 全服累计 EP 排行 |
 | `#RNGdle徽章` | 全部 233 枚徽章图鉴与收集进度 |
 | `#RNGdle帮助` | 帮助 |
 | `#RNGdle试掷 <数字>` | 仅 master：预览指定数字的结果，不消耗次数、不计入数据 |
@@ -32,13 +33,16 @@
 ```
 RNGdle-Plugin/
 ├── index.js            # 插件入口：命令与游戏流程
+├── guoba.support.js    # Guoba 面板配置支持
 ├── lib/
 │   ├── math-utils.js   # 源站数学工具函数（质数/回文/等差拆分等，原样移植）
 │   ├── badges.js       # 233 枚徽章定义 + 分数表 + 概率表（由 tools/gen.cjs 生成）
 │   ├── badges-zh.js    # 徽章中文本地化 + 稀有度文案 + 评语
 │   ├── analyze.js      # 分析引擎（编排判定、计分、评级）
+│   ├── config.js       # 配置读写（rankLimit / keepDays）
 │   └── percentiles.json# EP 总分 → 全服百分位对照表（60,392 条）
-├── resources/html/     # 渲染模板（结果卡/帮助/统计/排行/图鉴）
+├── resources/html/     # 渲染模板（结果卡/帮助/统计/日榜/总榜/图鉴）
+├── config/config.json  # 用户配置（运行时/Guoba 生成）
 ├── data/db.json        # 玩家数据（运行时生成）
 └── tools/              # 维护工具：再提取 + 生成 + 回归测试
     ├── extract-modules.cjs  # 从站点 chunk 切出模块源码
@@ -67,6 +71,15 @@ node plugins/RNGdle-Plugin/tools/test-e2e.mjs
 4. 在 `lib/badges-zh.js` 补充新徽章的中文翻译；
 5. 跑一遍校验：`node -e "import('file://.../lib/analyze.js').then(m => console.log(m.composeResult(2).totalScore))"`
    应输出 `119610065`。
+
+## 配置
+
+通过 **Guoba 面板**配置（或直接改 `config/config.json`）：
+
+| 配置项 | 默认 | 说明 |
+| --- | --- | --- |
+| `rankLimit` | 10 | 日榜/总榜显示人数上限（1~50） |
+| `keepDays` | 30 | 每日记录保留天数（1~30，1 即次日清理）；每天 4 点自动清理 |
 
 ## 致谢
 
