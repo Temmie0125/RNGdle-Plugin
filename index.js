@@ -58,6 +58,14 @@ function formatCountdown (ms) {
   return h > 0 ? `${h} 小时 ${m} 分钟` : m > 0 ? `${m} 分钟 ${s} 秒` : `${s} 秒`
 }
 
+/** 过滤无效昵称：空值、与uid相同、官Bot复合ID(botQQ:OpenID)样式都不算昵称 */
+function pickName (n, uid = '') {
+  if (!n) return ''
+  n = String(n).trim()
+  if (!n || n === String(uid) || /^\d+:[0-9A-F]{16,}$/i.test(n)) return ''
+  return n
+}
+
 function getUser (uid, name = '') {
   let u = db.users[uid]
   if (!u) {
@@ -260,9 +268,40 @@ export class rngdle extends plugin {
     return true
   }
 
+  /** 解析昵称：sender → 群成员缓存(gml) → 适配器用户资料缓存(users) → 官Bot群成员API兜底 */
+  async resolveName (uid = this.e?.user_id, e = this.e) {
+    if (!uid) return ''
+    let name = pickName(e?.sender?.card, uid) || pickName(e?.sender?.nickname, uid) ||
+      pickName(e?.member?.card, uid) || pickName(e?.member?.nickname, uid)
+    const bot = Bot[e?.self_id]
+    if (!name && bot?.gml?.get?.(e?.group_id)) {
+      const m = bot.gml.get(e.group_id).get(uid)
+      name = pickName(m?.card, uid) || pickName(m?.nickname, uid)
+    }
+    if (!name && bot?.users) {
+      const u = bot.users.get(uid)
+      name = pickName(u?.card, uid) || pickName(u?.nickname, uid)
+    }
+    if (!name && bot?.sdk?.getGroupMemberInfo && String(uid).includes(':')) {
+      // 官Bot复合ID且各处缓存均无昵称：拉群成员API，结果回写users缓存供后续免API查询
+      const group_id = String(e?.group_id || '').split(':').pop()
+      const openid = String(uid).slice(String(uid).indexOf(':') + 1)
+      if (group_id && openid) {
+        try {
+          const info = await bot.sdk.getGroupMemberInfo(group_id, openid)
+          name = pickName(info?.nickname, uid)
+          if (name) {
+            await bot.users?.set(uid, { ...(bot.users?.get(uid) || {}), nickname: name, card: name, user_id: uid })
+          }
+        } catch {}
+      }
+    }
+    return name
+  }
+
   async roll () {
     const uid = this.e.user_id
-    const name = this.e.sender?.card || this.e.sender?.nickname || ''
+    const name = await this.resolveName(uid)
     const day = todayKey()
     const u = getUser(uid, name)
     if (u.lastDate === day) {
@@ -303,7 +342,7 @@ export class rngdle extends plugin {
     const number = Math.max(0, Math.min(MAX_ROLL, parseInt(this.e.msg.match(/\d{1,7}$/)[0], 10)))
     const result = composeResult(number)
     const uid = this.e.user_id
-    const name = this.e.sender?.card || this.e.sender?.nickname || ''
+    const name = await this.resolveName(uid)
     const img = await renderResult(result, getUser(uid, name), {
       flavor: pickFlavor(result.tier, number),
       isReroll: true,
@@ -323,11 +362,17 @@ export class rngdle extends plugin {
 
   async stats () {
     const uid = this.e.user_id
-    const name = this.e.sender?.card || this.e.sender?.nickname || ''
     const u = db.users[uid]
     if (!u || !u.rolls) {
       await this.e.reply('你还没有掷过数～发送 #RNGdle 开始今天的掷数！')
       return true
+    }
+    if (!u.name) {
+      const resolved = await this.resolveName(uid)
+      if (resolved) {
+        u.name = getUser(uid, resolved).name
+        saveDb()
+      }
     }
     const collected = Object.keys(u.badges).length
     const last = u.lastNumber != null ? composeResult(u.lastNumber) : null
@@ -380,13 +425,32 @@ export class rngdle extends plugin {
     const daily = db.daily[todayKey()]
     const limit = Math.max(1, Math.min(50, parseInt(getConfig().rankLimit) || 10))
     const players = Object.entries(daily?.players || {})
-      .map(([uid, p]) => ({ uid, name: p.name || uid, number: p.number ?? '-', ep: p.ep || 0 }))
+      .map(([uid, p]) => ({ uid, name: p.name || '', number: p.number ?? '-', ep: p.ep || 0 }))
       .sort((a, b) => b.ep - a.ep)
       .slice(0, limit)
+    // 缺名用户（官Bot回调触发等场景）从缓存/API解析昵称并回填，避免榜单显示原始ID
+    let dirty = false
+    for (const p of players) {
+      if (p.name) continue
+      const resolved = await this.resolveName(p.uid)
+      if (resolved) {
+        const name = getUser(p.uid, resolved).name
+        p.name = name
+        if (daily?.players[p.uid]) daily.players[p.uid].name = name
+        if (daily?.best?.uid === p.uid) daily.best.name = name
+        dirty = true
+      } else {
+        p.name = p.uid
+      }
+    }
+    if (dirty) saveDb()
+    const bestName = daily?.best
+      ? (daily.best.name || players.find(p => p.uid === daily.best.uid)?.name || daily.best.uid)
+      : ''
     const img = await renderTpl('daily-rank.html', {
       _plugin: 'RNGdle',
       todayBest: daily?.best
-        ? { name: daily.best.name, number: daily.best.number, ep: fmtNum(daily.best.ep) }
+        ? { name: bestName, number: daily.best.number, ep: fmtNum(daily.best.ep) }
         : null,
       todayTotal: daily?.players ? Object.keys(daily.players).length : 0,
       todayCount: daily ? daily.count : 0,
@@ -407,9 +471,21 @@ export class rngdle extends plugin {
     const limit = Math.max(1, Math.min(50, parseInt(getConfig().rankLimit) || 10))
     const users = Object.entries(db.users)
       .filter(([, u]) => u.rolls > 0)
-      .map(([uid, u]) => ({ uid, name: u.name || uid, ep: u.lifetimeEP, rolls: u.rolls, best: u.best }))
+      .map(([uid, u]) => ({ uid, name: u.name || '', ep: u.lifetimeEP, rolls: u.rolls, best: u.best }))
       .sort((a, b) => b.ep - a.ep)
       .slice(0, limit)
+    let dirty = false
+    for (const u of users) {
+      if (u.name) continue
+      const resolved = await this.resolveName(u.uid)
+      if (resolved) {
+        u.name = getUser(u.uid, resolved).name
+        dirty = true
+      } else {
+        u.name = u.uid
+      }
+    }
+    if (dirty) saveDb()
     const img = await renderTpl('total-rank.html', {
       _plugin: 'RNGdle',
       totalPlayers: Object.keys(db.users).length,
