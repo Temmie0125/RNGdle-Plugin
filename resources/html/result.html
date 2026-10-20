@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #0b0e17 0%, #10152a 55%, #0d1120 100%);
+    color: #e5e7eb;
+    width: 720px;
+  }
+  #container { padding: 28px 30px 22px; }
+  .header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
+  .title { font-size: 26px; font-weight: 800; letter-spacing: 1px;
+    background: linear-gradient(90deg, #fbbf24, #f472b6, #818cf8);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 12px; color: #6b7280; }
+  .card {
+    background: linear-gradient(170deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 18px; padding: 26px 28px;
+  }
+  /* 数字展示 */
+  .digits { display: flex; gap: 10px; justify-content: center; margin: 6px 0 18px; }
+  .digit {
+    width: 76px; height: 96px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px; font-weight: 800; font-family: "Consolas", "Segoe UI", monospace;
+    background: linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+    border: 2px solid #6b7280; box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .t-trash     .digit { border-color: #b45309; box-shadow: 0 0 18px rgba(180,83,9,0.35); color: #fcd34d; }
+  .t-common    .digit { border-color: #9ca3af; box-shadow: 0 0 16px rgba(156,163,175,0.3); color: #f3f4f6; }
+  .t-uncommon  .digit { border-color: #10b981; box-shadow: 0 0 18px rgba(16,185,129,0.4); color: #a7f3d0; }
+  .t-rare      .digit { border-color: #3b82f6; box-shadow: 0 0 20px rgba(59,130,246,0.45); color: #bfdbfe; }
+  .t-epic      .digit { border-color: #a855f7; box-shadow: 0 0 24px rgba(168,85,247,0.5); color: #e9d5ff; }
+  .t-anomaly   .digit { border-color: #f97316; box-shadow: 0 0 26px rgba(249,115,22,0.55); color: #fed7aa; }
+  .t-mythic    .digit { border-color: #ec4899; box-shadow: 0 0 30px rgba(236,72,153,0.6), 0 0 50px rgba(168,85,247,0.3); color: #fbcfe8; }
+  /* 稀有度 */
+  .rarity-line { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700;
+    padding: 5px 16px; border-radius: 999px; letter-spacing: 1px; }
+  .p-trash    { background: rgba(180,83,9,0.18);  color: #fcd34d; border: 1px solid rgba(180,83,9,0.6); }
+  .p-common   { background: rgba(156,163,175,0.15); color: #d1d5db; border: 1px solid rgba(156,163,175,0.5); }
+  .p-uncommon { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.55); }
+  .p-rare     { background: rgba(59,130,246,0.16); color: #93c5fd; border: 1px solid rgba(59,130,246,0.6); }
+  .p-epic     { background: rgba(168,85,247,0.16); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.6); }
+  .p-anomaly  { background: rgba(249,115,22,0.16); color: #fdba74; border: 1px solid rgba(249,115,22,0.6); }
+  .p-mythic   { background: rgba(236,72,153,0.18); color: #f9a8d4; border: 1px solid rgba(236,72,153,0.65); }
+  .top { font-size: 14px; color: #9ca3af; }
+  /* EP */
+  .ep-line { text-align: center; margin-bottom: 8px; }
+  .ep { font-size: 40px; font-weight: 900; color: #fbbf24; }
+  .ep-unit { font-size: 16px; color: #d97706; font-weight: 700; margin-left: 6px; }
+  .flavor { text-align: center; font-size: 14px; color: #9ca3af; margin-bottom: 4px; }
+  /* 徽章明细 */
+  .section-title { display: flex; align-items: center; gap: 10px; margin: 22px 2px 12px; font-size: 16px; font-weight: 700; }
+  .section-title .count { font-size: 13px; color: #9ca3af; font-weight: 500; }
+  .section-title::before { content: ""; width: 4px; height: 16px; border-radius: 2px;
+    background: linear-gradient(180deg, #fbbf24, #f472b6); }
+  .badge { border: 1px solid rgba(255,255,255,0.07); border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 8px; background: rgba(255,255,255,0.025); }
+  .badge-top { display: flex; align-items: center; gap: 10px; }
+  .b-emoji { font-size: 22px; width: 30px; text-align: center; }
+  .b-name { font-size: 15px; font-weight: 700; color: #f3f4f6; flex: 1; }
+  .b-rarity { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; letter-spacing: 0.5px; }
+  .b-ep { font-size: 14px; font-weight: 800; color: #fbbf24; min-width: 110px; text-align: right; }
+  .b-ep.earn { color: #6b7280; font-weight: 600; font-size: 12px; }
+  .b-desc { font-size: 12.5px; color: #9ca3af; margin: 5px 0 0 40px; }
+  .mini { display: flex; gap: 4px; margin: 7px 0 0 40px; }
+  .mini span {
+    min-width: 22px; height: 26px; border-radius: 5px; display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; font-family: Consolas, monospace;
+    background: rgba(255,255,255,0.04); color: #6b7280; border: 1px solid transparent;
+  }
+  .mini span.hi { background: rgba(251,191,36,0.14); color: #fde68a; border-color: rgba(251,191,36,0.55); box-shadow: 0 0 8px rgba(251,191,36,0.25); }
+  /* 页脚 */
+  .footer { display: flex; justify-content: space-between; margin-top: 18px; font-size: 12px; color: #6b7280; }
+  .footer b { color: #9ca3af; font-weight: 700; }
+</style>
+</head>
+<body class="t-{{tier}}">
+<div id="container">
+  <div class="header">
+    <div class="title">🎲 {{title}}</div>
+    <div class="subtitle">范围 0 ~ {{maxRoll}} · 每日一掷</div>
+  </div>
+
+  <div class="card">
+    <div class="digits">
+      {{each digits d}}
+      <div class="digit">{{d}}</div>
+      {{/each}}
+    </div>
+    <div class="rarity-line">
+      <span class="pill p-{{tier}}">{{tierEmoji}} {{tierName}} · {{tierPill}}</span>
+      <span class="top">{{topText}}</span>
+    </div>
+    <div class="ep-line">
+      <span class="ep">+{{totalScore}}</span><span class="ep-unit">EP 熵点</span>
+    </div>
+    <div class="flavor">{{flavor}}</div>
+  </div>
+
+  <div class="section-title">徽章明细 <span class="count">共 {{earnedCount}} 枚 · 其中 {{scoringCount}} 枚计入 EP</span></div>
+  <div class="card" style="padding: 14px 16px;">
+    {{each badges b}}
+    <div class="badge">
+      <div class="badge-top">
+        <span class="b-emoji">{{b.emoji}}</span>
+        <span class="b-name">{{b.name}}</span>
+        <span class="b-rarity p-{{b.rarity}}">{{b.rarityZh}}</span>
+        <span class="b-ep {{b.isScoring ? '' : 'earn'}}">{{b.ep}}</span>
+      </div>
+      <div class="b-desc">{{b.desc}}</div>
+      {{if b.digits}}
+      <div class="mini">
+        {{each b.digits dg}}
+        <span class="{{dg.hi ? 'hi' : ''}}">{{dg.d}}</span>
+        {{/each}}
+      </div>
+      {{/if}}
+    </div>
+    {{/each}}
+  </div>
+
+  <div class="footer">
+    <span>💎 累计 EP：<b>{{lifetimeEP}}</b></span>
+    <span>🎲 累计掷数：<b>{{rolls}}</b> 次</span>
+    <span>📅 今日全服已掷：<b>{{todayCount}}</b> 次</span>
+  </div>
+  {{if countdown}}
+  <div class="footer" style="justify-content: center; margin-top: 6px;">
+    <span>⏳ 距离下次掷数还有 <b>{{countdown}}</b></span>
+  </div>
+  {{/if}}
+</div>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #0b0e17 0%, #10152a 55%, #0d1120 100%);
+    color: #e5e7eb; width: 640px;
+  }
+  #container { padding: 28px 30px; }
+  .title { font-size: 24px; font-weight: 800; margin-bottom: 16px;
+    background: linear-gradient(90deg, #fbbf24, #f472b6, #818cf8);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 18px 22px; margin-bottom: 14px; }
+  .name { font-size: 18px; font-weight: 800; color: #f3f4f6; margin-bottom: 12px; }
+  .grid { display: flex; gap: 10px; }
+  .stat { flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; padding: 12px 14px; text-align: center; }
+  .stat .v { font-size: 20px; font-weight: 800; color: #fbbf24; }
+  .stat .k { font-size: 12px; color: #6b7280; margin-top: 3px; }
+  h3 { font-size: 15px; margin-bottom: 10px; color: #fbbf24; }
+  .row { display: flex; justify-content: space-between; font-size: 13.5px; color: #9ca3af; line-height: 2; }
+  .row b { color: #e5e7eb; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 999px; }
+  .p-trash    { background: rgba(180,83,9,0.18);  color: #fcd34d; }
+  .p-common   { background: rgba(156,163,175,0.15); color: #d1d5db; }
+  .p-uncommon { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+  .p-rare     { background: rgba(59,130,246,0.16); color: #93c5fd; }
+  .p-epic     { background: rgba(168,85,247,0.16); color: #d8b4fe; }
+  .p-anomaly  { background: rgba(249,115,22,0.16); color: #fdba74; }
+  .p-mythic   { background: rgba(236,72,153,0.18); color: #f9a8d4; }
+  .progress { height: 10px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+  .progress .bar { height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, #fbbf24, #f472b6); }
+  .badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
+  .chip { display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 7px 10px; }
+  .chip .em { font-size: 17px; }
+  .chip .nm { font-size: 12px; color: #d1d5db; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .chip .ct { font-size: 11px; color: #fbbf24; font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="title">📊 RNGdle · 我的统计</div>
+
+  <div class="card">
+    <div class="name">👤 {{name}}</div>
+    <div class="grid">
+      <div class="stat"><div class="v">{{lifetimeEP}}</div><div class="k">累计 EP</div></div>
+      <div class="stat"><div class="v">{{rolls}}</div><div class="k">累计掷数</div></div>
+      <div class="stat"><div class="v">{{collected}}/{{totalBadges}}</div><div class="k">徽章收集</div></div>
+    </div>
+    <div class="progress"><div class="bar" style="width: {{collectedPercent}}%;"></div></div>
+  </div>
+
+  <div class="card">
+    <h3>🏆 纪录</h3>
+    {{if best}}
+    <div class="row"><span>🥇 历史最佳</span><span><b>{{best.number}}</b>（{{best.ep}} EP · {{best.date}}）</span></div>
+    {{/if}}
+    {{if last}}
+    <div class="row">
+      <span>🎲 最近一次</span>
+      <span><b>{{last.number}}</b>（+{{last.ep}} EP）
+        <span class="pill p-{{last.tierPill}}">{{last.tierEmoji}} {{last.tierName}}</span>
+        {{last.topText}}
+      </span>
+    </div>
+    {{/if}}
+    {{if !best && !last}}
+    <div class="row"><span>还没有纪录，快去掷一次吧～</span></div>
+    {{/if}}
+  </div>
+
+  <div class="card">
+    <h3>💬 最常抽到的徽章</h3>
+    <div class="badge-grid">
+      {{each topBadges b}}
+      <div class="chip">
+        <span class="em">{{b.emoji}}</span>
+        <span class="nm">{{b.name}}</span>
+        <span class="ct">×{{b.count}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+</div>
+</body>
+</html>

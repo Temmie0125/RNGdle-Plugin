@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #0b0e17 0%, #10152a 55%, #0d1120 100%);
+    color: #e5e7eb; width: 720px;
+  }
+  #container { padding: 28px 30px; }
+  .title { font-size: 24px; font-weight: 800; margin-bottom: 4px;
+    background: linear-gradient(90deg, #fbbf24, #f472b6, #818cf8);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 16px; }
+  .subtitle b { color: #fbbf24; }
+  .progress { height: 10px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; margin-bottom: 18px; }
+  .progress .bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #fbbf24, #f472b6); }
+  .sec { margin-bottom: 16px; }
+  .sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .sec-pill { font-size: 13px; font-weight: 800; padding: 3px 14px; border-radius: 999px; letter-spacing: 1px; }
+  .sec-count { font-size: 12px; color: #6b7280; }
+  .p-mythic   { background: rgba(236,72,153,0.18); color: #f9a8d4; }
+  .p-anomaly  { background: rgba(249,115,22,0.16); color: #fdba74; }
+  .p-epic     { background: rgba(168,85,247,0.16); color: #d8b4fe; }
+  .p-rare     { background: rgba(59,130,246,0.16); color: #93c5fd; }
+  .p-uncommon { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+  .p-common   { background: rgba(156,163,175,0.15); color: #d1d5db; }
+  .b-mythic   { border-color: rgba(236,72,153,0.5); box-shadow: 0 0 10px rgba(236,72,153,0.12); }
+  .b-anomaly  { border-color: rgba(249,115,22,0.45); }
+  .b-epic     { border-color: rgba(168,85,247,0.4); }
+  .b-rare     { border-color: rgba(59,130,246,0.35); }
+  .b-uncommon { border-color: rgba(16,185,129,0.3); }
+  .b-common   { border-color: rgba(255,255,255,0.1); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .chip { display: flex; align-items: center; gap: 8px; border: 1px solid; border-radius: 10px;
+    padding: 7px 10px; background: rgba(255,255,255,0.025); }
+  .chip .em { font-size: 17px; }
+  .chip .info { flex: 1; overflow: hidden; }
+  .chip .nm { font-size: 12.5px; font-weight: 700; color: #e5e7eb;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .chip .sc { font-size: 10.5px; color: #6b7280; font-family: Consolas, monospace; }
+  .chip .ct { font-size: 11px; font-weight: 800; color: #fbbf24; }
+  .chip.none { opacity: 0.42; }
+  .chip .ct.none-ct { color: #4b5563; }
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="title">🏅 RNGdle · 徽章图鉴</div>
+  <div class="subtitle">已收集 <b>{{collected}} / {{totalBadges}}</b> 种（{{collectedPercent}}%）· 按稀有度分组</div>
+  <div class="progress"><div class="bar" style="width: {{collectedPercent}}%;"></div></div>
+
+  {{each tiers t}}
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-pill p-{{t.tier}}">{{t.tierName}} · {{t.tierPill}}</span>
+      <span class="sec-count">{{t.badges.length}} 枚</span>
+    </div>
+    <div class="grid">
+      {{each t.badges b}}
+      <div class="chip b-{{t.tier}} {{b.owned ? '' : 'none'}}">
+        <span class="em">{{b.emoji}}</span>
+        <span class="info">
+          <div class="nm">{{b.name}}</div>
+          <div class="sc">{{b.score}} EP · {{b.probability}}</div>
+        </span>
+        <span class="ct {{b.owned ? '' : 'none-ct'}}">{{b.owned ? '×' + b.owned : '未收集'}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/each}}
+</div>
+</body>
+</html>

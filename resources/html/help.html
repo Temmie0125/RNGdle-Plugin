@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #0b0e17 0%, #10152a 55%, #0d1120 100%);
+    color: #e5e7eb; width: 640px;
+  }
+  #container { padding: 28px 30px; }
+  .title { font-size: 26px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px;
+    background: linear-gradient(90deg, #fbbf24, #f472b6, #818cf8);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 18px; }
+  .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 18px 22px; margin-bottom: 14px; }
+  h3 { font-size: 16px; margin-bottom: 10px; color: #fbbf24; }
+  p, li { font-size: 13.5px; color: #9ca3af; line-height: 1.9; }
+  ul { list-style: none; }
+  li b { color: #e5e7eb; }
+  .cmd { display: flex; align-items: center; margin-bottom: 9px; }
+  .cmd b { display: inline-block; min-width: 170px; font-size: 14px; color: #93c5fd; font-family: Consolas, monospace; }
+  .cmd span { font-size: 13px; color: #9ca3af; }
+  .tiers { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .t { font-size: 12px; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
+  .t0 { background: rgba(180,83,9,0.2);  color: #fcd34d; }
+  .t1 { background: rgba(156,163,175,0.15); color: #d1d5db; }
+  .t2 { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+  .t3 { background: rgba(59,130,246,0.16); color: #93c5fd; }
+  .t4 { background: rgba(168,85,247,0.16); color: #d8b4fe; }
+  .t5 { background: rgba(249,115,22,0.16); color: #fdba74; }
+  .t6 { background: rgba(236,72,153,0.18); color: #f9a8d4; }
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="title">🎲 RNGdle · 每日随机数</div>
+  <div class="subtitle">复刻自 rngdle.com · 每天一次机会，掷出属于你的数字</div>
+
+  <div class="card">
+    <h3>🎴 玩法</h3>
+    <ul>
+      <li>🌀 每天可掷 <b>1 次</b>，生成 <b>0 ~ {{maxRoll}}</b> 的随机数（每日 0 点重置）</li>
+      <li>🎯 数字会被分析出各种趣味性质：<b>回文、质数、顺子、对子、梗数（69/420/777…）</b>等</li>
+      <li>🏅 每种性质对应一枚<b>徽章</b>，徽章按稀有度带有不同 EP（熵点）分值</li>
+      <li>⚡ 本次总 EP 由徽章分值相加得出，并换算成<b>全服百分位</b>评级（同系列徽章只取最高分计入）</li>
+      <li>💾 掷数会自动累计：总 EP、徽章收集、个人最佳纪录</li>
+    </ul>
+    <div class="tiers">
+      <span class="t t0">🟫 废铁 · 后 1%</span>
+      <span class="t t1">⬜ 普通</span>
+      <span class="t t2">🟩 罕见 · 前 50~25%</span>
+      <span class="t t3">🟦 稀有 · 前 25~10%</span>
+      <span class="t t4">🟪 史诗 · 前 10~5%</span>
+      <span class="t t5">🟧 异象 · 前 5~1%</span>
+      <span class="t t6">🟥 神话 · 前 1%</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📜 命令</h3>
+    <div class="cmd"><b>#RNGdle / #RNG</b><span>掷出今天的随机数</span></div>
+    <div class="cmd"><b>#RNGdle统计</b><span>查看个人累计 EP、最佳纪录与徽章收集</span></div>
+    <div class="cmd"><b>#RNGdle排行</b><span>今日最佳数字与全服累计 EP 排行</span></div>
+    <div class="cmd"><b>#RNGdle徽章</b><span>全部 233 枚徽章图鉴与收集进度</span></div>
+    <div class="cmd"><b>#RNGdle帮助</b><span>查看本帮助</span></div>
+  </div>
+
+  <div class="card">
+    <h3>💡 小贴士</h3>
+    <ul>
+      <li>命令不区分大小写，<b>#rng</b> 也可以触发</li>
+      <li>越稀有的数字 EP 越高；「一百万」「86400」「314159」这类彩蛋数字价值连城</li>
+      <li>EP 相同也别灰心——百分位统计的是全部 100 万个可能的结果</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>
