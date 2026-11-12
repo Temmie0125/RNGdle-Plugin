@@ -178,7 +178,8 @@ function badgeRows (result) {
       if (c.type === 'whole') String(result.number).split('').forEach((_, i) => hi.add(i))
       else if (c.type === 'indices') (c.indices || []).forEach(i => hi.add(i))
       else if (c.type === 'range') {
-        for (let i = c.start; i <= c.end; i++) hi.add(i)
+        // end 为开区间（同 String.slice），如「42」命中时 start=2、end=4 → 只高亮第 2、3 位
+        for (let i = c.start; i < c.end; i++) hi.add(i)
       } else if (c.type === 'groups') {
         for (const g of c.groups || []) for (const i of g) hi.add(i)
       }
