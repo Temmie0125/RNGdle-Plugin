@@ -83,29 +83,53 @@ function getUser (uid, name = '') {
   return u
 }
 
+/** 每日可抽次数配置（1~20） */
+function dailyRollLimit () {
+  return Math.max(1, Math.min(20, parseInt(getConfig().dailyRolls) || 1))
+}
+
+/** 存量用户补记历史最低：未记录过最低值的用户从最近一次抽取开始统计，返回是否发生补记 */
+function ensureWorst (u) {
+  if (u.rolls > 0 && !u.worst && u.lastNumber != null) {
+    const last = composeResult(u.lastNumber)
+    u.worst = { number: u.lastNumber, ep: last.totalScore, date: u.lastDate || todayKey() }
+    return true
+  }
+  return false
+}
+
 function recordRoll (uid, name, result) {
   const u = getUser(uid, name)
   const day = todayKey()
   u.rolls += 1
   u.lifetimeEP += result.totalScore
+  // 每日已抽次数按天重置（多次抽取全部计入统计）
+  if (u.lastDate !== day) u.todayRolls = 0
+  u.todayRolls = (u.todayRolls || 0) + 1
   u.lastDate = day
   u.lastNumber = result.number
   for (const b of result.badges) u.badges[b.id] = (u.badges[b.id] || 0) + 1
+  ensureWorst(u)
   if (!u.best || result.totalScore > u.best.ep) {
     u.best = { number: result.number, ep: result.totalScore, date: day }
+  }
+  if (!u.worst || result.totalScore < u.worst.ep) {
+    u.worst = { number: result.number, ep: result.totalScore, date: day }
   }
   const daily = db.daily[day] = db.daily[day] || { count: 0, best: null, players: {} }
   daily.count += 1
   if (!daily.best || result.totalScore > daily.best.ep) {
     daily.best = { uid: String(uid), name: u.name, number: result.number, ep: result.totalScore }
   }
-  // 每日玩家数据（用于日榜）
+  // 每日玩家数据（用于日榜）：多次抽取取最高EP的一次计入排行
   daily.players = daily.players || {}
-  const p = daily.players[uid] = daily.players[uid] || { name: u.name, rolls: 0, ep: 0 }
+  const p = daily.players[uid] = daily.players[uid] || { name: u.name, rolls: 0, ep: -1, number: null }
   p.name = u.name
   p.rolls += 1
-  p.ep += result.totalScore
-  p.number = result.number
+  if (result.totalScore > p.ep) {
+    p.ep = result.totalScore
+    p.number = result.number
+  }
   pruneDaily()
   saveDb()
   return u
@@ -213,6 +237,8 @@ async function renderResult (result, user, extra = {}) {
     rolls: user.rolls,
     countdown: extra.countdown || '',
     todayCount: extra.todayCount || 0,
+    remaining: extra.remaining ?? 0,
+    dailyRolls: extra.dailyRolls || 1,
     maxRoll: fmtNum(MAX_ROLL),
     isReroll: !!extra.isReroll,
   })
@@ -313,10 +339,18 @@ export class rngdle extends plugin {
     const name = await this.resolveName(uid)
     const day = todayKey()
     const u = getUser(uid, name)
-    if (u.lastDate === day) {
+    const limit = dailyRollLimit()
+    const used = u.lastDate === day ? (u.todayRolls || 0) : 0
+    if (used >= limit) {
       const last = u.lastNumber != null ? composeResult(u.lastNumber) : null
+      // 多次抽取时提示今日单次最高成绩
+      const p = db.daily[day]?.players?.[uid]
+      const bestLine = limit > 1 && p && p.ep >= 0
+        ? `今日最佳：${p.number}（${fmtNum(p.ep)} EP，共掷 ${p.rolls} 次）\n`
+        : ''
       await this.replyWithAt(
-        `今天已经掷过啦～你的数字是 ${u.lastNumber}（${fmtNum(last ? last.totalScore : 0)} EP）\n` +
+        `今天的机会已经用完啦～你的数字是 ${u.lastNumber}（${fmtNum(last ? last.totalScore : 0)} EP）\n` +
+        bestLine +
         `距离明日重置还有 ${formatCountdown(msUntilMidnight())}，明天再来吧！`,
       )
       return true
@@ -325,9 +359,12 @@ export class rngdle extends plugin {
     const result = composeResult(number)
     const user = recordRoll(uid, name, result)
     const daily = db.daily[day]
+    const remaining = limit - (user.todayRolls || 0)
     const img = await renderResult(result, user, {
       flavor: pickFlavor(result.tier, number),
-      countdown: formatCountdown(msUntilMidnight()),
+      countdown: remaining > 0 ? '' : formatCountdown(msUntilMidnight()),
+      remaining,
+      dailyRolls: limit,
       todayCount: daily ? daily.count : 0,
     })
     if (!img) {
@@ -364,6 +401,7 @@ export class rngdle extends plugin {
     const img = await renderTpl('help.html', {
       _plugin: 'RNGdle',
       maxRoll: fmtNum(MAX_ROLL),
+      dailyRolls: dailyRollLimit(),
     })
     await this.e.reply(img || 'RNGdle 帮助图渲染失败')
     return true
@@ -383,6 +421,7 @@ export class rngdle extends plugin {
         saveDb()
       }
     }
+    if (ensureWorst(u)) saveDb()
     const collected = Object.keys(u.badges).length
     const last = u.lastNumber != null ? composeResult(u.lastNumber) : null
     // 拥有次数最多的徽章
@@ -409,6 +448,7 @@ export class rngdle extends plugin {
       rolls: u.rolls,
       lifetimeEP: fmtNum(u.lifetimeEP),
       best: u.best ? { number: u.best.number, ep: fmtNum(u.best.ep), date: u.best.date } : null,
+      worst: u.worst ? { number: u.worst.number, ep: fmtNum(u.worst.ep), date: u.worst.date } : null,
       last: last
         ? {
             number: last.number,

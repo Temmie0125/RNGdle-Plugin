@@ -37,12 +37,12 @@
 <body>
 <div id="container">
   <div class="title">🎲 RNGdle · 每日随机数</div>
-  <div class="subtitle">复刻自 rngdle.com · 每天一次机会，掷出属于你的数字</div>
+  <div class="subtitle">复刻自 rngdle.com · {{if dailyRolls > 1}}每天 {{dailyRolls}} 次机会{{else}}每天一次机会{{/if}}，掷出属于你的数字</div>
 
   <div class="card">
     <h3>🎴 玩法</h3>
     <ul>
-      <li>🌀 每天可掷 <b>1 次</b>，生成 <b>0 ~ {{maxRoll}}</b> 的随机数（每日 0 点重置）</li>
+      <li>🌀 每天可掷 <b>{{dailyRolls}} 次</b>，生成 <b>0 ~ {{maxRoll}}</b> 的随机数（每日 0 点重置）</li>
       <li>🎯 数字会被分析出各种趣味性质：<b>回文、质数、顺子、对子、梗数（69/420/777…）</b>等</li>
       <li>🏅 每种性质对应一枚<b>徽章</b>，徽章按稀有度带有不同 EP（熵点）分值</li>
       <li>⚡ 本次总 EP 由徽章分值相加得出，并换算成<b>全服百分位</b>评级（同系列徽章只取最高分计入）</li>

@@ -78,6 +78,7 @@ node plugins/RNGdle-Plugin/tools/test-e2e.mjs
 
 | 配置项 | 默认 | 说明 |
 | --- | --- | --- |
+| `dailyRolls` | 1 | 每日可抽次数（1~20）；多次抽取全部计入统计，每日排行取当天最高 EP 的一次 |
 | `rankLimit` | 10 | 日榜/总榜显示人数上限（1~50） |
 | `keepDays` | 30 | 每日记录保留天数（1~30，1 即次日清理）；每天 4 点自动清理 |
 

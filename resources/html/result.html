@@ -91,7 +91,7 @@
 <div id="container">
   <div class="header">
     <div class="title">🎲 {{title}}</div>
-    <div class="subtitle">范围 0 ~ {{maxRoll}} · 每日一掷</div>
+    <div class="subtitle">范围 0 ~ {{maxRoll}} · {{if dailyRolls > 1}}每日 {{dailyRolls}} 次机会{{else}}每日一掷{{/if}}</div>
   </div>
 
   <div class="card">
@@ -148,6 +148,10 @@
   {{if countdown}}
   <div class="footer" style="justify-content: center; margin-top: 6px;">
     <span>⏳ 距离下次掷数还有 <b>{{countdown}}</b></span>
+  </div>
+  {{else if remaining > 0}}
+  <div class="footer" style="justify-content: center; margin-top: 6px;">
+    <span>🎯 今日还可掷 <b>{{remaining}}</b> 次</span>
   </div>
   {{/if}}
 </div>
